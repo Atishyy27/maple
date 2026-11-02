@@ -1,0 +1,24 @@
+firstName: Jane
+lastName: Doe
+email: jane.doe@email.com
+phone: "+1 (555) 123-4567"
+location: San Francisco, CA
+linkedIn: https://linkedin.com/in/janedoe
+portfolio: https://github.com/janedoe
+github: https://github.com/janedoe
+school: Stanford University
+degree: Bachelors
+major: Computer Science
+gradYear: "2026"
+experienceLevel: "1-3"
+yearsExperience: "2"
+skills: [JavaScript, TypeScript, React, Git, Python]
+workAuthorized: true
+needsSponsorship: false
+earliestStartDate: "2026-06-01"
+salaryExpectation: "120000"
+referralSource: LinkedIn
+coverLetter: >-
+  I'm excited to apply. Recent CS grad, full-stack TypeScript and React,
+  and I care about clean code and shipping to real users.
+resumePath: cv/sample-resume.pdf

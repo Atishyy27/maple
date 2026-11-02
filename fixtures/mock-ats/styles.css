@@ -1,0 +1,46 @@
+/* Deliberately plain. The engine must not depend on any class name here. */
+:root { --ink:#1b1d21; --muted:#6b7280; --line:#e4e6ea; --accent:#0f766e; --bg:#fbfbfc; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+.board { max-width:760px; margin:0 auto; padding:32px 20px 72px; }
+.hdr { border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:24px; }
+h1 { font-size:24px; margin:0 0 4px; }
+h2 { font-size:17px; margin:28px 0 10px; }
+h3 { font-size:14px; margin:0 0 10px; color:var(--muted); font-weight:600; }
+.role { color:var(--muted); margin:0; }
+.steps { display:flex; gap:18px; list-style:none; padding:0; margin:16px 0 0; font-size:13px; color:var(--muted); }
+.step.current { color:var(--accent); font-weight:600; }
+fieldset { border:1px solid var(--line); border-radius:8px; padding:16px; margin:0 0 18px; background:#fff; }
+legend { font-size:13px; font-weight:600; color:var(--muted); padding:0 6px; }
+.field, .loose { margin-bottom:14px; }
+.field > span, .field > label, .caption { display:block; font-size:13px; margin-bottom:5px; }
+em { color:#b91c1c; font-style:normal; margin-left:2px; }
+input[type=text], input[type=email], input[type=tel], input[type=url], select, textarea {
+  width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px;
+  font:inherit; background:#fff; }
+input[aria-invalid=true] { border-color:#b91c1c; }
+textarea { resize:vertical; }
+.combo { width:100%; text-align:left; padding:8px 10px; border:1px solid var(--line);
+  border-radius:6px; background:#fff; font:inherit; cursor:pointer; }
+.listbox { list-style:none; margin:4px 0 0; padding:4px; border:1px solid var(--line);
+  border-radius:6px; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,.08); }
+.listbox [role=option] { padding:7px 9px; border-radius:4px; cursor:pointer; }
+.listbox [role=option]:hover { background:#f1f5f9; }
+[role=radiogroup] { display:flex; flex-wrap:wrap; gap:8px; }
+[role=radio] { border:1px solid var(--line); border-radius:999px; padding:6px 14px;
+  cursor:pointer; background:#fff; font-size:14px; }
+[role=radio][aria-checked=true] { border-color:var(--accent); color:var(--accent); font-weight:600; }
+.chips label { display:inline-block; margin:0 12px 8px 0; font-size:14px; }
+.row { border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:12px; background:#fff; }
+button { font:inherit; }
+.primary { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:9px 18px; cursor:pointer; }
+.secondary { background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px 14px; cursor:pointer; }
+.ghost { background:none; border:0; color:var(--muted); padding:9px 10px; cursor:pointer; }
+.link { background:none; border:0; color:#b91c1c; padding:0; cursor:pointer; font-size:13px; }
+.hint { display:block; color:var(--muted); font-size:12px; margin-top:4px; }
+.ok { color:var(--accent); font-weight:600; margin-top:18px; }
+.boards { list-style:none; padding:0; }
+.boards li { border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:12px; background:#fff; }
+.boards span { display:block; color:var(--muted); font-size:13px; margin-top:4px; }
+code { background:#eef1f4; padding:1px 5px; border-radius:4px; font-size:13px; }

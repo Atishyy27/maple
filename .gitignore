@@ -1,0 +1,15 @@
+node_modules/
+.DS_Store
+
+# Run output and the signed-in browser profile
+var/
+
+# Personal data: never commit. See fixtures/demo-*.yaml for the format.
+answers.yaml
+profile*.yaml
+jobs.txt
+cv/*
+!cv/.gitkeep
+
+# One-off probes from live applications: local only, may hold personal details
+scratch/

@@ -1,0 +1,30 @@
+{
+  "name": "maple",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mass Apply Efficiently: reads any job application form live, fills it from your own data, and leaves review and submit to you.",
+  "scripts": {
+    "apply": "tsx src/cli.ts apply",
+    "dry": "tsx src/cli.ts apply --dry-run",
+    "profile": "tsx src/cli.ts profile",
+    "fields": "tsx src/cli.ts fields",
+    "typecheck": "tsc --noEmit",
+    "serve": "python3 -m http.server 3939 --directory fixtures/mock-ats",
+    "demo": "tsx src/cli.ts apply --profile fixtures/demo-profile.yaml --answers fixtures/demo-answers.yaml --jobs fixtures/demo-jobs.txt --headless",
+    "test": "tsx test/fuzz-resolve.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0",
+    "yaml": "^2.6.0",
+    "pdfjs-dist": "^4.9.155"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.10.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

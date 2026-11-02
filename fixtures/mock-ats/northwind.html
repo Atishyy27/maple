@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Northwind Logistics - Apply</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="board">
+  <header class="hdr">
+    <h1>Northwind Logistics</h1>
+    <p class="role">Platform Engineer, Bengaluru</p>
+    <ol class="steps">
+      <li id="tab-1" class="step current">1. About you</li>
+      <li id="tab-2" class="step">2. History</li>
+      <li id="tab-3" class="step">3. Declarations</li>
+    </ol>
+  </header>
+
+  <!-- STEP 1 ------------------------------------------------------------
+       Exercises: aria-labelledby labels (no <label for>), a button-based
+       combobox opening a role=listbox, and a field that does not exist in
+       the DOM until a specific option is chosen. All three are patterns
+       that broke a real run and that a selector-based tool cannot survive. -->
+  <section class="step-panel" id="step-1">
+    <div class="field">
+      <span id="lbl-src">How did you hear about us?<em>*</em></span>
+      <button type="button" class="combo" id="src-btn" aria-labelledby="lbl-src"
+              aria-haspopup="listbox" aria-expanded="false" data-value="">Select One</button>
+      <ul class="listbox" id="src-list" role="listbox" hidden>
+        <li role="option">Job Board</li>
+        <li role="option">LinkedIn</li>
+        <li role="option">Employee Referral</li>
+        <li role="option">University Fair</li>
+      </ul>
+    </div>
+
+    <!-- injected only when "Employee Referral" is picked -->
+    <div id="referral-slot"></div>
+
+    <div class="field">
+      <span id="lbl-given">Given Name(s)<em>*</em></span>
+      <input type="text" id="given" aria-labelledby="lbl-given" />
+    </div>
+    <div class="field">
+      <span id="lbl-family">Family Name<em>*</em></span>
+      <input type="text" id="family" aria-labelledby="lbl-family" />
+    </div>
+    <div class="field">
+      <span id="lbl-email">Email Address<em>*</em></span>
+      <input type="email" id="email" aria-labelledby="lbl-email" />
+    </div>
+
+    <!-- Rejects any non-digit, the way a real tenant silently refused "+91 ..." -->
+    <div class="field">
+      <span id="lbl-phone">Phone Number<em>*</em></span>
+      <input type="text" id="phone" aria-labelledby="lbl-phone" />
+      <small class="hint" id="phone-err" hidden>Digits only, no country prefix.</small>
+    </div>
+    <div class="field">
+      <span id="lbl-ext">Phone Extension</span>
+      <input type="text" id="ext" aria-labelledby="lbl-ext" />
+    </div>
+
+    <div class="field">
+      <span id="lbl-city">City<em>*</em></span>
+      <input type="text" id="city" aria-labelledby="lbl-city" />
+    </div>
+
+    <button type="button" class="primary" data-next="2">Save and Continue</button>
+  </section>
+
+  <!-- STEP 2 ------------------------------------------------------------
+       Exercises the repeating section: rows are added dynamically and each
+       row's inputs get a generated id prefix, so nothing can be addressed
+       by a fixed selector. Deleting a row must not disturb the others. -->
+  <section class="step-panel" id="step-2" hidden>
+    <h2>Work Experience</h2>
+    <div id="work-rows"></div>
+    <button type="button" class="secondary" id="add-work">Add Another</button>
+
+    <h2>Education</h2>
+    <div id="edu-rows"></div>
+    <button type="button" class="secondary" id="add-edu">Add</button>
+
+    <div class="field">
+      <span id="lbl-cv">Resume/CV<em>*</em></span>
+      <input type="file" id="cv" aria-labelledby="lbl-cv" accept=".pdf,.doc,.docx" />
+      <small class="hint" id="cv-ok" hidden></small>
+    </div>
+
+    <button type="button" class="ghost" data-next="1">Back</button>
+    <button type="button" class="primary" data-next="3">Save and Continue</button>
+  </section>
+
+  <!-- STEP 3 ------------------------------------------------------------
+       Exercises role=radio toggles carrying the OPTION text as their label,
+       which is how Google Forms renders choices: there is no <input> at all. -->
+  <section class="step-panel" id="step-3" hidden>
+    <div class="field">
+      <span id="lbl-auth">Do you have the right to work in this location?<em>*</em></span>
+      <div role="radiogroup" aria-labelledby="lbl-auth">
+        <div role="radio" aria-checked="false" tabindex="0" aria-label="Yes">Yes</div>
+        <div role="radio" aria-checked="false" tabindex="0" aria-label="No">No</div>
+      </div>
+    </div>
+    <div class="field">
+      <span id="lbl-notice">Notice period (in days)<em>*</em></span>
+      <input type="text" id="notice" aria-labelledby="lbl-notice" />
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="terms" /> I have read and accept the terms</label>
+    </div>
+    <button type="button" class="ghost" data-next="2">Back</button>
+    <button type="button" class="primary" id="submit">Submit application</button>
+  </section>
+
+  <p id="confirmation" hidden class="ok"></p>
+</main>
+
+<script>
+// ---- step navigation -------------------------------------------------
+document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
+  const n = b.dataset.next;
+  document.querySelectorAll('.step-panel').forEach(p => p.hidden = true);
+  document.getElementById('step-' + n).hidden = false;
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('current'));
+  document.getElementById('tab-' + n).classList.add('current');
+  window.scrollTo(0, 0);
+}));
+
+// ---- combobox --------------------------------------------------------
+const srcBtn = document.getElementById('src-btn');
+const srcList = document.getElementById('src-list');
+srcBtn.addEventListener('click', () => {
+  const open = !srcList.hidden;
+  srcList.hidden = open;
+  srcBtn.setAttribute('aria-expanded', String(!open));
+});
+srcList.querySelectorAll('[role=option]').forEach(o => o.addEventListener('click', () => {
+  srcBtn.textContent = o.textContent;
+  srcBtn.dataset.value = o.textContent;
+  srcList.hidden = true;
+  srcBtn.setAttribute('aria-expanded', 'false');
+  // the conditional field: only exists after Employee Referral
+  const slot = document.getElementById('referral-slot');
+  if (o.textContent === 'Employee Referral') {
+    slot.innerHTML =
+      '<div class="field"><span id="lbl-ref">Referrer email address<em>*</em></span>' +
+      '<input type="text" id="referrer" aria-labelledby="lbl-ref" /></div>';
+  } else { slot.innerHTML = ''; }
+}));
+
+// ---- phone validation: mirrors a real tenant refusing a country prefix
+const phone = document.getElementById('phone');
+phone.addEventListener('blur', () => {
+  const bad = /[^0-9]/.test(phone.value);
+  document.getElementById('phone-err').hidden = !bad;
+  phone.setAttribute('aria-invalid', String(bad));
+});
+
+// ---- repeating rows --------------------------------------------------
+let wN = 0, eN = 0;
+function addWork() {
+  wN++; const id = 'work' + (100 + wN * 7);           // non-sequential on purpose
+  const d = document.createElement('div');
+  d.className = 'row'; d.dataset.section = 'work';
+  d.innerHTML =
+    '<h3>Work Experience ' + wN + '</h3>' +
+    '<div class="field"><span id="' + id + '-lt">Job Title<em>*</em></span><input id="' + id + '-title" aria-labelledby="' + id + '-lt" /></div>' +
+    '<div class="field"><span id="' + id + '-lc">Company<em>*</em></span><input id="' + id + '-company" aria-labelledby="' + id + '-lc" /></div>' +
+    '<div class="field"><span id="' + id + '-ld">From (MM/YYYY)</span><input id="' + id + '-from" aria-labelledby="' + id + '-ld" /></div>' +
+    '<button type="button" class="link del">Delete</button>';
+  document.getElementById('work-rows').appendChild(d);
+  d.querySelector('.del').addEventListener('click', () => d.remove());
+}
+function addEdu() {
+  eN++; const id = 'edu' + (200 + eN * 11);
+  const d = document.createElement('div');
+  d.className = 'row'; d.dataset.section = 'education';
+  d.innerHTML =
+    '<h3>Education ' + eN + '</h3>' +
+    '<div class="field"><span id="' + id + '-ls">School or University<em>*</em></span><input id="' + id + '-school" aria-labelledby="' + id + '-ls" /></div>' +
+    '<div class="field"><span id="' + id + '-lg">Overall Result (GPA)</span><input id="' + id + '-gpa" aria-labelledby="' + id + '-lg" /></div>' +
+    '<button type="button" class="link del">Delete</button>';
+  document.getElementById('edu-rows').appendChild(d);
+  d.querySelector('.del').addEventListener('click', () => d.remove());
+}
+document.getElementById('add-work').addEventListener('click', addWork);
+document.getElementById('add-edu').addEventListener('click', addEdu);
+addWork();
+
+document.getElementById('cv').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const ok = document.getElementById('cv-ok');
+  ok.hidden = false; ok.textContent = f.name + ' successfully uploaded';
+});
+
+// ---- aria radios -----------------------------------------------------
+document.querySelectorAll('[role=radiogroup]').forEach(g => {
+  g.querySelectorAll('[role=radio]').forEach(r => r.addEventListener('click', () => {
+    g.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked', 'false'));
+    r.setAttribute('aria-checked', 'true');
+  }));
+});
+
+document.getElementById('submit').addEventListener('click', () => {
+  const c = document.getElementById('confirmation');
+  c.hidden = false;
+  c.textContent = 'Application received. Reference NW-' + Math.random().toString(36).slice(2, 10).toUpperCase();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vertex Analytics - Apply</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="board">
+  <header class="hdr">
+    <h1>Vertex Analytics</h1>
+    <p class="role">Data Engineer Intern, Remote</p>
+  </header>
+
+  <form id="app">
+    <!-- Plain, well-formed controls. The resolver should get all of these
+         with no help at all; if it misses one here, something regressed. -->
+    <fieldset>
+      <legend>Basics</legend>
+      <div class="field"><label for="full-name">Full Name *</label><input id="full-name" type="text" required /></div>
+      <div class="field"><label for="mail">Email *</label><input id="mail" type="email" required /></div>
+      <div class="field"><label for="tel">Phone *</label><input id="tel" type="tel" required /></div>
+      <div class="field"><label for="linkedin">LinkedIn URL</label><input id="linkedin" type="url" /></div>
+      <div class="field"><label for="github">GitHub URL</label><input id="github" type="url" /></div>
+      <div class="field"><label for="loc">Current Location *</label><input id="loc" type="text" required /></div>
+    </fieldset>
+
+    <!-- Name-variant trap: these must stay EMPTY. A greedy "name" alias that
+         fills them is the exact leak the scorer's token penalty exists to stop. -->
+    <fieldset>
+      <legend>Also on file</legend>
+      <div class="field"><label for="middle">Middle Name</label><input id="middle" type="text" /></div>
+      <div class="field"><label for="maiden">Maiden Name</label><input id="maiden" type="text" /></div>
+      <div class="field"><label for="father">Father's Name</label><input id="father" type="text" /></div>
+      <div class="field"><label for="nominee">Nominee Name</label><input id="nominee" type="text" /></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Education</legend>
+      <div class="field"><label for="uni">University *</label><input id="uni" type="text" required /></div>
+      <div class="field"><label for="grad">Graduation Year *</label><input id="grad" type="text" required /></div>
+      <div class="field">
+        <label for="degree">Degree *</label>
+        <select id="degree" required>
+          <option value="">Select one</option>
+          <option>B.Tech</option><option>B.E.</option><option>B.Sc</option>
+          <option>M.Tech</option><option>Other</option>
+        </select>
+      </div>
+    </fieldset>
+
+    <!-- Proximity-only labels: no for=, no aria-*, just adjacent text. The
+         resolver has to fall back to the nearest short text block. -->
+    <fieldset>
+      <legend>Compensation</legend>
+      <div class="loose"><div class="caption">Current CTC (in lakhs)</div><input type="text" name="cctc" /></div>
+      <div class="loose"><div class="caption">Expected CTC (in lakhs)</div><input type="text" name="ectc" /></div>
+      <div class="loose"><div class="caption">Current notice period (in days)</div><input type="text" name="np" /></div>
+    </fieldset>
+
+    <!-- Experience bracket as aria radios. Only ONE is true; a tool that
+         ticks a higher bracket to clear a gate is cheating and the eval
+         gold file marks that as a wrong fill, not a miss. -->
+    <fieldset>
+      <legend>Experience</legend>
+      <span id="lbl-exp">Total years of experience</span>
+      <div role="radiogroup" aria-labelledby="lbl-exp">
+        <div role="radio" aria-checked="false" tabindex="0" aria-label="0-1 years">0-1 years</div>
+        <div role="radio" aria-checked="false" tabindex="0" aria-label="1-2 years">1-2 years</div>
+        <div role="radio" aria-checked="false" tabindex="0" aria-label="2-4 years">2-4 years</div>
+        <div role="radio" aria-checked="false" tabindex="0" aria-label="4-6 years">4-6 years</div>
+      </div>
+      <div class="field">
+        <label for="excl">Years of experience excluding internships *</label>
+        <input id="excl" type="text" />
+        <small class="hint">No true answer for a student. The gold file expects this BLANK.</small>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Skills</legend>
+      <div class="chips">
+        <label><input type="checkbox" name="skill" value="Python" /> Python</label>
+        <label><input type="checkbox" name="skill" value="TypeScript" /> TypeScript</label>
+        <label><input type="checkbox" name="skill" value="Java" /> Java</label>
+        <label><input type="checkbox" name="skill" value="Rust" /> Rust</label>
+        <label><input type="checkbox" name="skill" value="COBOL" /> COBOL</label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Attachments and notes</legend>
+      <div class="field"><label for="cv2">Resume *</label><input id="cv2" type="file" accept=".pdf,.doc,.docx" required /><small class="hint" id="cv2-ok" hidden></small></div>
+      <div class="field"><label for="why">Why do you want to work here?</label><textarea id="why" rows="4"></textarea></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Voluntary</legend>
+      <div class="field">
+        <label for="gender">Gender</label>
+        <select id="gender"><option value="">Select one</option><option>Male</option><option>Female</option><option>Other</option><option>Decline to self identify</option></select>
+      </div>
+      <div class="field"><label><input type="checkbox" id="consent" /> I consent to voluntarily provide demographic information</label>
+        <small class="hint">Gold file expects this UNTICKED: consent is never assumed.</small></div>
+    </fieldset>
+
+    <button type="button" class="primary" id="go">Submit application</button>
+  </form>
+  <p id="done" hidden class="ok"></p>
+</main>
+
+<script>
+document.querySelectorAll('[role=radiogroup]').forEach(g => {
+  g.querySelectorAll('[role=radio]').forEach(r => r.addEventListener('click', () => {
+    g.querySelectorAll('[role=radio]').forEach(x => x.setAttribute('aria-checked','false'));
+    r.setAttribute('aria-checked','true');
+  }));
+});
+document.getElementById('cv2').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const ok = document.getElementById('cv2-ok'); ok.hidden = false;
+  ok.textContent = f.name + ' successfully uploaded';
+});
+document.getElementById('go').addEventListener('click', () => {
+  const d = document.getElementById('done'); d.hidden = false;
+  d.textContent = 'Application received. Reference VX-' + Math.random().toString(36).slice(2,10).toUpperCase();
+});
+</script>
+</body>
+</html>

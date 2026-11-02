@@ -1,0 +1,14 @@
+why_this_company:
+  match: ["why do you want to work", "why are you interested in this role", "why this company", "what interests you about"]
+  answer: >-
+    I want to work on systems where correctness is observable, and this team
+    ships that kind of product. My recent work has been browser automation and
+    evaluation pipelines, which is the same discipline applied elsewhere.
+cover_letter:
+  match: ["cover letter", "additional information", "anything else you would like us to know"]
+  answer: >-
+    Recent CS graduate, strongest in TypeScript and React, comfortable owning a
+    feature from design through to the tests that prove it works.
+how_did_you_hear:
+  match: ["how did you hear about", "where did you find this", "referral source"]
+  answer: LinkedIn

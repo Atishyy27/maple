@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mock boards</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="board">
+  <h1>Mock application boards</h1>
+  <p>Two self-contained fixtures for testing a label-resolving autofill engine.
+     Nothing here hardcodes a selector; every control is addressed by its human label.</p>
+  <ul class="boards">
+    <li><a href="northwind.html">Northwind Logistics</a>
+      <span>Three-step wizard. Button combobox over a role=listbox, a field that
+      only exists after a specific option is chosen, digits-only phone validation,
+      and repeating Work Experience / Education rows with generated id prefixes.</span></li>
+    <li><a href="vertex.html">Vertex Analytics</a>
+      <span>Single page. Clean labels, a name-variant leak trap, proximity-only
+      captions with no for= or aria, aria radios for experience brackets, an
+      unanswerable "excluding internships" field, and a consent box that must
+      stay unticked.</span></li>
+  </ul>
+  <p class="hint">Serve with <code>npm run serve</code>, then point the engine at
+     <code>http://localhost:3939/northwind.html</code>.</p>
+</main>
+</body>
+</html>
