@@ -374,6 +374,9 @@ visible in `var/unanswered.log`.
   normal browser. Same reasoning as the LinkedIn auto-send refusal: the tool is
   capable, the account risk is not worth one form.
 - No CAPTCHA solving. If one appears, solve it in the open window.
+- Sign-in and sign-up walls are filled with nothing (`src/form/gate.ts`). Fynd's posting
+  redirects to a login page whose only box is "Email or phone number", and on 2 Nov 2026
+  the phone alias typed into it. Sign in by hand, then run again.
 - `--headless` is not advised for Workday; its SPA behaves differently.
 - Resume parsing is regex over PDF text. It fills what it can prove and marks
   the rest TODO. Two-column CV layouts extract worst -- check the output.

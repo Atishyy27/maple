@@ -3,6 +3,7 @@ import path from "node:path";
 import { chromium, type BrowserContext, type Page, type Frame } from "playwright";
 import { introspect, scopes } from "./form/introspect.js";
 import { resolveField } from "./form/resolve.js";
+import { isAuthGate } from "./form/gate.js";
 import { fillField, lastFillError } from "./form/fill.js";
 import { pickAdapter } from "./ats/adapters.js";
 import { appendUnanswered, ROOT } from "./profile/load.js";
@@ -189,6 +190,14 @@ export async function applyToJob(
 
       let stepFilled = 0;
       const seenLabels: string[] = [];
+      const pageLabels: string[] = [];
+      for (const scope of scopes(page)) {
+        try { pageLabels.push(...(await introspect(scope)).map((f) => f.label)); } catch { /* frame died mid-nav */ }
+      }
+      if (isAuthGate(pageLabels, page.url())) {
+        log(adapter.name, `sign-in page at ${page.url()} -- filled nothing. Sign in by hand, then run again.`);
+        break;
+      }
       for (const scope of scopes(page)) {
         let fields: Field[] = [];
         try { fields = await introspect(scope); } catch { continue; }
