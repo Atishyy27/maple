@@ -192,11 +192,17 @@ const UNANSWERABLE: RegExp[] = [
   // a resume unless something says otherwise, so fall back to it rather than
   // leaving the one required attachment empty.
   if (!cands.length && field.kind === "file" && typeof profile.resumePath === "string" && profile.resumePath) {
-    const isCover = /cover\s*letter/i.test(label);
-    const p2 = isCover && typeof profile.coverLetterPath === "string" && profile.coverLetterPath
-      ? profile.coverLetterPath
-      : profile.resumePath;
-    return { field, value: p2, source: "file", score: 0.5, alts: [] };
+    // Greenhouse labels BOTH upload buttons "Attach"; only the input id
+    // (resume vs cover_letter) or the surrounding text says which is which.
+    // Enterpret, 2 Nov 2026: the CV went into the cover-letter slot too.
+    const where = `${label} ${field.id ?? ""} ${field.name ?? ""} ${field.context ?? ""}`;
+    const isCover = /cover[\s_-]*letter/i.test(where);
+    if (isCover) {
+      // No cover letter on file means leave the slot empty, never the CV.
+      if (typeof profile.coverLetterPath !== "string" || !profile.coverLetterPath) return null;
+      return { field, value: profile.coverLetterPath, source: "file", score: 0.5, alts: [] };
+    }
+    return { field, value: profile.resumePath, source: "file", score: 0.5, alts: [] };
   }
 
   if (!cands.length) return null;

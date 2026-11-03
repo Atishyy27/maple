@@ -130,8 +130,9 @@ $EDITOR profile.yaml answers.yaml
 # 3. see what the mapper actually sees on a real posting (read-only)
 npm run fields -- 'https://job-boards.greenhouse.io/<co>/jobs/1234567'
 
-# 4. fill without submitting
-npm run dry -- --url '<job-url>'
+# 4. fill without submitting, in a browser that outlives the run
+npm run browser                      # terminal 1: keep this open
+npm run apply -- --attach --cv cv/ai.pdf --url '<job-url>'
 
 # 5. put URLs in jobs.txt, then for real
 npm run apply -- --submit
@@ -254,8 +255,8 @@ Workday run. But it can never finish the job, for one structural reason.
    my response`. Match on the invariant tail, never on the address.
 5. **Run it from a real terminal.** A run driven from an agent harness can be killed on
    a background timer, and killing the process closes the browser and takes the filled
-   form with it. The durable fix is to attach over CDP to a browser you started
-   separately, so the window outlives the script. Not wired into `run.ts` yet.
+   form with it. Start the browser separately with `npm run browser` and pass
+   `--attach`: the run then only connects and disconnects, so the window survives.
 
 ### ERR_INTERNET_DISCONNECTED when the network is fine (6 Oct 2026)
 
@@ -381,9 +382,17 @@ visible in `var/unanswered.log`.
   is deliberately conservative: it needs a real state attribute on a toggle,
   and 3+ structurally identical clickable siblings for a chip group. Widgets
   that meet neither bar are skipped and logged, not guessed at.
-- Not yet run against a live Greenhouse/Lever/Ashby/Workday posting. Every
-  number above is from the two mock boards. Run `npm run fields -- <real-url>`
-  first.
+- Live runs so far are single postings, not a measured batch: Enterpret on
+  Greenhouse filled 11 of 11 fields on 2 Nov 2026, after the cover-letter fix
+  below. Run `npm run fields -- <real-url>` first on a new board.
+
+### Greenhouse: the CV went into the cover-letter slot (Enterpret, 2 Nov 2026)
+
+Both upload buttons are labelled "Attach". Only the hidden input ids, `resume` and
+`cover_letter`, say which is which. The resolver read the label alone and fell back
+to the CV for any file input, so both slots got the CV. It now reads the id, name
+and surrounding text, and leaves a cover-letter slot empty when no cover letter is
+on file. `test/upload-slots.ts` holds the case.
 - No LLM. Novel essay questions go to `unanswered.log` for you to answer once,
   by design. An LLM fallback would slot into `resolve.ts` behind the same
   `Resolved | null` return.
