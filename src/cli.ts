@@ -1,5 +1,7 @@
+import fs from "node:fs";
+import path from "node:path";
 import { loadProfile, loadAnswers, loadJobs } from "./profile/load.js";
-import { applyToJob, inspectOnly, openContext, type RunOpts } from "./run.js";
+import { applyToJob, inspectOnly, openContext, releaseContext, type RunOpts } from "./run.js";
 import { writeProfileFromCv } from "./profile/fromCv.js";
 
 const argv = process.argv.slice(2);
@@ -23,6 +25,9 @@ const opts: RunOpts = {
   // after a batch dry run is not review, it is a memory leak.
   keepOpen: false,
   waitMinutes: Number(val("--wait", "0")),
+  attach: has("--attach")
+    ? (val("--attach")?.startsWith("http") || val("--attach")?.startsWith("ws") ? val("--attach") : "http://127.0.0.1:9222")
+    : undefined,
 };
 
 function usage() {
@@ -42,8 +47,11 @@ flags
   --submit         actually submit (default: off)
   --headless       no visible browser (not advised for Workday)
   --wait <min>     park until a fillable form appears; sign in by hand meanwhile
+  --attach [url]   drive a browser started with \`npm run browser\` (default http://127.0.0.1:9222).
+                   The window outlives the run, so a killed run never loses a filled form.
   --human <ms>     per-keystroke delay, e.g. 40. 0 = instant
   --threshold <f>  label-match confidence, 0..1 (default 0.55). Raise to be safer.
+  --cv <file>      CV to upload for this run, overriding resumePath in the profile
   --profile <f>    profile file (default profile.yaml)
   --answers <f>    answer bank (default answers.yaml)
 `);
@@ -73,6 +81,13 @@ async function main() {
   if (cmd !== "apply") { usage(); return; }
 
   const profile = loadProfile(val("--profile", "profile.yaml")!);
+  // The CV differs per role, and a stored path rots (a renamed folder, another
+  // machine). A missing file uploads nothing and fails quietly, so refuse to run.
+  const cv = val("--cv");
+  if (cv) profile.resumePath = path.resolve(cv);
+  if (typeof profile.resumePath === "string" && profile.resumePath && !fs.existsSync(profile.resumePath)) {
+    return console.error(`CV not found: ${profile.resumePath}\npass --cv <file> or fix resumePath in the profile`);
+  }
   const answers = loadAnswers(val("--answers", "answers.yaml")!);
   const one = val("--url");
   let jobs = one ? [one] : loadJobs(val("--jobs", "jobs.txt")!);
@@ -82,6 +97,9 @@ async function main() {
   if (!jobs.length) return console.error("no jobs. Put URLs in jobs.txt or pass --url");
   // leave the window up for review only when there is exactly one thing to review
   opts.keepOpen = (has("--keep-open") || !opts.submit) && jobs.length === 1 && !opts.headless;
+  // Attached: every filled tab stays for review in the user's own window, and
+  // the run exits instead of blocking, because it no longer owns the browser.
+  if (opts.attach) opts.keepOpen = !opts.submit;
   console.log(`${jobs.length} job(s) | submit=${opts.submit} | threshold=${opts.threshold}\n`);
 
   const ctx = await openContext(opts);
@@ -106,11 +124,16 @@ async function main() {
   const skipped = results.reduce((a, r) => a + r.skipped, 0);
   if (skipped) console.log(`\n${skipped} field(s) had no confident answer -> var/unanswered.log. Add them to answers.yaml.`);
 
+  if (opts.attach) {
+    console.log("\nfilled tabs left open in your browser for review. Nothing was submitted unless --submit.");
+    await releaseContext(ctx, opts);
+    return;
+  }
   if (opts.keepOpen && !opts.headless) {
     console.log("\nbrowser left open for review. Ctrl-C to quit.");
     await new Promise(() => {});
   }
-  await ctx.close();
+  await releaseContext(ctx, opts);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

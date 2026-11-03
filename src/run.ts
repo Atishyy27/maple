@@ -16,6 +16,8 @@ export type RunOpts = {
   threshold: number;
   keepOpen: boolean;
   waitMinutes: number;
+  /** CDP endpoint of a browser started separately (`npm run browser`). */
+  attach?: string;
 };
 
 const USER_DATA = path.resolve(ROOT, "var/browser-profile");
@@ -26,6 +28,16 @@ const USER_DATA = path.resolve(ROOT, "var/browser-profile");
  * and every later run on that tenant is already authenticated.
  */
 export async function openContext(o: RunOpts): Promise<BrowserContext> {
+  if (o.attach) {
+    // A run started from an agent or a short-lived shell can be killed, and a
+    // launched browser dies with it, taking a filled single-page form along.
+    // Attaching to a browser that owns its own process means the run can end
+    // or crash and the window, the login and the filled form all survive.
+    const browser = await chromium.connectOverCDP(o.attach, { isLocal: true });
+    const ctx = browser.contexts()[0] ?? (await browser.newContext());
+    ctx.setDefaultTimeout(8000);
+    return ctx;
+  }
   fs.mkdirSync(USER_DATA, { recursive: true });
   const ctx = await chromium.launchPersistentContext(USER_DATA, {
     headless: o.headless,
@@ -304,6 +316,15 @@ export async function inspectOnly(url: string, o: RunOpts) {
   }
   console.log(`\n${adapter.name} :: ${rows.length} fields discovered on ${url}\n`);
   console.table(rows);
-  await ctx.close();
+  await releaseContext(ctx, o);
   return rows;
+}
+
+/**
+ * End a run. A launched context is closed; an attached one is only
+ * disconnected, which leaves the separately started browser and its pages up.
+ */
+export async function releaseContext(ctx: BrowserContext, o: RunOpts) {
+  if (o.attach) await ctx.browser()?.close();
+  else await ctx.close();
 }
