@@ -74,8 +74,12 @@ export async function introspect(scope: Page | Frame): Promise<Field[]> {
     };
 
     /** Attached to a part of the page that is actually on screen right now. */
-    const inLivePart = (el: Element): boolean => {
-      let node: Element | null = el;
+    // fromParent: Material UI and similar kits hide the file <input> itself with
+    // display:none inside a visible clickable <label>, so for file inputs the test
+    // starts one level up. An inactive wizard step hides an ancestor, which is
+    // still caught. Gnani careers page, 4 Nov 2026: the CV box was skipped.
+    const inLivePart = (el: Element, fromParent = false): boolean => {
+      let node: Element | null = fromParent ? el.parentElement : el;
       for (let i = 0; i < 12 && node; i++) {
         const cs = getComputedStyle(node);
         if (cs.display === "none" || cs.visibility === "hidden") return false;
@@ -213,7 +217,7 @@ export async function introspect(scope: Page | Frame): Promise<Field[]> {
       // it is exempt from the size/opacity test. It is NOT exempt from
       // display:none -- that is how an inactive wizard step is hidden, and
       // filling those re-uploads the resume on every page.
-      if (isFile ? !inLivePart(el) : !visible(el)) return false;
+      if (isFile ? !inLivePart(el, true) : !visible(el)) return false;
       const a = el as HTMLInputElement;
       if (a.disabled) return false;
       if (a.readOnly && kindOf(el) !== "combobox") return false;
