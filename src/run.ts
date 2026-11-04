@@ -4,6 +4,7 @@ import { chromium, type BrowserContext, type Page, type Frame } from "playwright
 import { introspect, scopes } from "./form/introspect.js";
 import { resolveField } from "./form/resolve.js";
 import { isAuthGate } from "./form/gate.js";
+import { isClosedPosting } from "./form/closed.js";
 import { fillField, lastFillError } from "./form/fill.js";
 import { pickAdapter } from "./ats/adapters.js";
 import { appendUnanswered, ROOT } from "./profile/load.js";
@@ -143,6 +144,13 @@ export async function applyToJob(
 
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+
+    const bodyText = await page.locator("body").innerText({ timeout: 8000 }).catch(() => "");
+    if (isClosedPosting(bodyText)) {
+      log(adapter.name, "posting is closed -- nothing filled.");
+      if (!o.keepOpen) await page.close().catch(() => {});
+      return { url, platform: adapter.name, filled: 0, skipped: 0, submitted: false, error: "posting closed", durationMs: Date.now() - start };
+    }
 
     if (adapter.requiresAccount) {
       log(adapter.name, "tenant requires a signed-in account. If a login wall appears, sign in once in this window -- the session persists.");
