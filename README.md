@@ -374,6 +374,9 @@ visible in `var/unanswered.log`.
   normal browser. Same reasoning as the LinkedIn auto-send refusal: the tool is
   capable, the account risk is not worth one form.
 - No CAPTCHA solving. If one appears, solve it in the open window.
+- Greenhouse boards run invisible reCAPTCHA Enterprise on submit. An automated Submit click on
+  Enterpret (2 Nov 2026) returned "There was an error processing your application" on a
+  fully valid form. Leave the final click to the person, and do not retry automated submits.
 - Sign-in and sign-up walls are filled with nothing (`src/form/gate.ts`). Fynd's posting
   redirects to a login page whose only box is "Email or phone number", and on 2 Nov 2026
   the phone alias typed into it. Sign in by hand, then run again.
