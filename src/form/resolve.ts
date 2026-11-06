@@ -101,7 +101,11 @@ export function matchOption(options: Option[], want: string): Option | undefined
     );
     if (s > bestScore) { bestScore = s; bestOpt = o; }
   }
-  return bestScore >= 0.5 ? bestOpt : undefined;
+  if (bestScore >= 0.5) return bestOpt;
+  // A notice period of "0" has no "0" option on most boards; they offer
+  // "Immediately available" or "Immediate joiner" instead.
+  if (/^0( days?)?$/.test(w)) return options.find((o) => /\bimmediate/i.test(o.text));
+  return undefined;
 }
 
 /** Yes/no option pickers, used for boolean answers on radios and selects. */
@@ -196,6 +200,9 @@ const UNANSWERABLE: RegExp[] = [
     // (resume vs cover_letter) or the surrounding text says which is which.
     // Enterpret, 2 Nov 2026: the CV went into the cover-letter slot too.
     const where = `${label} ${field.id ?? ""} ${field.name ?? ""} ${field.context ?? ""}`;
+    // Ashby's "Autofill from resume" box re-parses the CV and rewrites fields
+    // already filled; Espa, 6 Nov 2026, the real Resume slot came back empty.
+    if (/autofill/i.test(where)) return null;
     const isCover = /cover[\s_-]*letter/i.test(where);
     if (isCover) {
       // No cover letter on file means leave the slot empty, never the CV.
