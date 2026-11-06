@@ -131,7 +131,7 @@ $EDITOR profile.yaml answers.yaml
 npm run fields -- 'https://job-boards.greenhouse.io/<co>/jobs/1234567'
 
 # 4. fill without submitting, in a browser that outlives the run
-npm run browser                      # terminal 1: keep this open
+npm run browser                      # starts your installed Chrome on port 9222 (browser:bundled = Playwright Chromium)
 npm run apply -- --attach --cv cv/ai.pdf --url '<job-url>'
 
 # 5. put URLs in jobs.txt, then for real
@@ -257,6 +257,10 @@ Workday run. But it can never finish the job, for one structural reason.
    a background timer, and killing the process closes the browser and takes the filled
    form with it. Start the browser separately with `npm run browser` and pass
    `--attach`: the run then only connects and disconnects, so the window survives.
+6. **Lever's captcha rejects Playwright's browser.** Playwright launches Chromium with
+   `--enable-automation`, and Lever's hCaptcha failed the submit even when he clicked it
+   (Weekday, 5 Nov 2026). `npm run browser` now starts your installed Chrome on its own
+   profile, so the page sees an ordinary browser (`navigator.webdriver` is false).
 
 ### ERR_INTERNET_DISCONNECTED when the network is fine (6 Oct 2026)
 
