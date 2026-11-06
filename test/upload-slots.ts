@@ -22,6 +22,8 @@ const cases: { name: string; field: Field; profile: Profile; want: string | null
   { name: "greenhouse cover slot, cover letter on file", field: file("Attach", "cover_letter"), profile: { ...base, coverLetterPath: cover } as Profile, want: cover },
   { name: "cover named only in the surrounding text", field: file("Upload", "f2", "Cover Letter Attach Dropbox"), profile: base, want: null },
   { name: "dropzone copy for the resume", field: file("Drop your resume here or click to upload", "u1"), profile: base, want: cv },
+  { name: "ashby autofill box stays empty", field: file("Upload file", "", "Autofill from resume Upload your resume here to autofill key application fields."), profile: base, want: null },
+  { name: "ashby real resume slot", field: file("Resume", "_systemfield_resume"), profile: base, want: cv },
 ];
 
 let fail = 0;

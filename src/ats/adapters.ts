@@ -227,6 +227,9 @@ export const ashby: Adapter = {
       await clickByText(page, /^apply( for this job| now)?$/i, 2000).catch(() => {});
       await settle(page);
     }
+    // Ashby renders the form client-side after load; reading fields before the
+    // system fields appear finds nothing and reports "filled 0".
+    await page.waitForSelector('input[id^="_systemfield_"]', { timeout: 15000 }).catch(() => {});
   },
 };
 
