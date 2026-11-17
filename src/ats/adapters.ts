@@ -1,4 +1,4 @@
-import type { Page } from "playwright";
+import type { Page, Locator } from "playwright";
 import { ensureShim } from "../form/introspect.js";
 
 /**
@@ -28,14 +28,24 @@ const settle = async (page: Page, ms = 1200) => {
 };
 
 /** First visible+enabled control whose text matches, across main frame + iframes. */
+/**
+ * Indices of elements in `loc` whose visible text (or value) matches `re`, read in ONE
+ * round trip. The old loops read the first 40 or 80 elements one by one and stopped
+ * there, so on a long page the Apply or Submit button past that point was never seen
+ * (thejobcompany, hellointern, workatastartup; bulk run 17 Nov 2026).
+ */
+async function matching(loc: Locator, re: RegExp): Promise<number[]> {
+  const texts = await loc.evaluateAll((els) =>
+    els.map((e) => ((e as HTMLElement).innerText || (e as HTMLInputElement).value || "").trim().replace(/\s+/g, " "))
+  ).catch(() => [] as string[]);
+  return texts.flatMap((t, i) => (t && re.test(t) ? [i] : []));
+}
+
 async function clickByText(page: Page, re: RegExp, timeout = 3000): Promise<boolean> {
   for (const frame of [page.mainFrame(), ...page.frames()]) {
-    const loc = frame.locator('button, [role="button"], input[type="submit"], a[class*="button" i]');
-    const n = Math.min(await loc.count().catch(() => 0), 40);
-    for (let i = 0; i < n; i++) {
+    const loc = frame.locator('button, [role="button"], input[type="submit"], a[class*="button" i], a[class*="btn" i]');
+    for (const i of await matching(loc, re)) {
       const el = loc.nth(i);
-      const txt = ((await el.innerText().catch(() => "")) || (await el.getAttribute("value").catch(() => "")) || "").trim();
-      if (!txt || !re.test(txt)) continue;
       if (!(await el.isVisible().catch(() => false))) continue;
       if (await el.isDisabled().catch(() => false)) continue;
       await el.scrollIntoViewIfNeeded().catch(() => {});
@@ -93,11 +103,8 @@ async function clickReveal(page: Page, re: RegExp): Promise<boolean> {
   const SEL = 'a, button, [role="button"], input[type="submit"], input[type="button"], [onclick]';
   for (const frame of [page.mainFrame(), ...page.frames()]) {
     const loc = frame.locator(SEL);
-    const n = Math.min(await loc.count().catch(() => 0), 80);
-    for (let i = 0; i < n; i++) {
+    for (const i of await matching(loc, re)) {
       const el = loc.nth(i);
-      const txt = ((await el.innerText().catch(() => "")) || (await el.getAttribute("value").catch(() => "")) || "").trim();
-      if (!txt || !re.test(txt)) continue;
       if (!(await el.isVisible().catch(() => false))) continue;
       if (await el.isDisabled().catch(() => false)) continue;
       // A real link is followed in this tab. Clicking it often opens a new tab
@@ -116,17 +123,24 @@ async function clickReveal(page: Page, re: RegExp): Promise<boolean> {
 }
 
 async function revealGatedForm(page: Page): Promise<void> {
-  // Up to two hops: a careers listing links to the job page, which has its own Apply.
-  for (let hop = 0; hop < 2; hop++) {
+  // Up to three hops: aggregator listing -> its "apply" page -> the company's own job page
+  // -> the form. Aggregators often hold the real link behind a short countdown
+  // (thejobcompany: "You can apply in 3"), so wait it out before reading the page.
+  for (let hop = 0; hop < 3; hop++) {
     if (await hasVisibleForm(page)) return;
-    const clicked = await clickReveal(page, REVEAL_RE);
-    if (!clicked) return;
-    await settle(page, 1400);
+    let clicked = await clickReveal(page, REVEAL_RE);
+    if (!clicked) {
+      if (!/apply in \d|redirecting|please wait/i.test(await page.innerText("body").catch(() => ""))) return;
+      await page.waitForTimeout(6000);
+      clicked = await clickReveal(page, REVEAL_RE);
+      if (!clicked) return;
+    }
+    await settle(page, 2500);
   }
 }
 
 const NEXT_RE = /^(next|continue|save and continue|save & continue|proceed|next step)\b/i;
-const SUBMIT_RE = /^(submit application|submit|send application|apply now|finish|complete application)\b/i;
+const SUBMIT_RE = /^(submit application|submit|send application|send|apply now|apply for this (job|role|position)|apply|finish|complete application)\b/i;
 const CONFIRM_RE = /(thank you|application (was )?(received|submitted|complete)|we(?:'| ha)ve received|successfully submitted|confirmation)/i;
 
 export const generic: Adapter = {
@@ -180,7 +194,19 @@ export const generic: Adapter = {
   },
 
   async submit(page) {
-    const ok = await clickByText(page, SUBMIT_RE);
+    let ok = await clickByText(page, SUBMIT_RE);
+    // Some forms label their button with an icon or an odd word. A form with exactly one
+    // visible submit-type button has no ambiguity about which button sends it.
+    if (!ok) {
+      for (const frame of [page.mainFrame(), ...page.frames()]) {
+        const btn = frame.locator('form button[type="submit"]:visible, form input[type="submit"]:visible');
+        if ((await btn.count().catch(() => 0)) === 1) {
+          await btn.first().click({ timeout: 3000 }).catch(() => {});
+          ok = true;
+          break;
+        }
+      }
+    }
     if (ok) await settle(page, 3000);
     return ok;
   },
