@@ -30,6 +30,7 @@ const child = spawn(exe, [
   `--user-data-dir=${profile}`,
   "--no-first-run",
   "--no-default-browser-check",
+  ...(process.argv.includes("--headless") || process.env.MAPLE_HEADLESS ? ["--headless=new", "--window-size=1366,900"] : []),
 ], { detached: true, stdio: "ignore" });
 child.unref();
 

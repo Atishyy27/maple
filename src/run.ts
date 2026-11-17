@@ -280,7 +280,18 @@ export async function applyToJob(
     let submitted = false;
     let confirmationId: string | undefined;
 
-    if (o.submit) {
+    // Bulk runs, 17 Nov 2026: pages with no real form (a careers listing, a job board)
+    // still have an "Apply" or "Submit" button, and pressing it with nothing filled is
+    // not an application. Submit only a form that is mostly ours and has no empty
+    // required field left.
+    const emptyRequired = o.submit ? await page.evaluate(() =>
+      Array.from(document.querySelectorAll("input,textarea,select") as unknown as ArrayLike<HTMLInputElement>).filter((e) =>
+        (e.required || e.getAttribute("aria-required") === "true") && e.offsetParent !== null &&
+        e.type !== "hidden" && (e.type === "file" ? !e.files?.length : (e.type === "radio" || e.type === "checkbox") ? false : !e.value)
+      ).length).catch(() => 0) : 0;
+    if (o.submit && (filled < 3 || emptyRequired > 0)) {
+      log(adapter.name, `not submitted: filled ${filled}, empty required ${emptyRequired}`);
+    } else if (o.submit) {
       submitted = await adapter.submit(page);
       confirmationId = await adapter.confirmation(page);
       log(adapter.name, submitted ? `submitted -> ${confirmationId ?? "no confirmation text found"}` : "submit button not found");
