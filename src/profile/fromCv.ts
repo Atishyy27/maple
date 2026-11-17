@@ -125,9 +125,11 @@ export function parseCv(rawText: string): Record<string, unknown> {
   if (other) p.portfolio = other.replace(/[.,)]+$/, "");
 
   // Name: the first line that reads like a person, not a heading.
-  const nameLine = lines.slice(0, 6).find(
-    (l) => /^[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,3}$/.test(l) && !/resume|curriculum|vitae|cv/i.test(l)
-  );
+  // A two-column header puts the name and the email on one row ("Atishay Jain  a@b.com | +91 ..."),
+  // so also try each line cut at the first email, phone or separator.
+  const nameLine = lines.slice(0, 6)
+    .flatMap((l) => [l, l.split(/\s{2,}|\s[|·•]\s|\s\S+@\S+|\s\+?\d[\d\s-]{7,}/)[0]!.trim()])
+    .find((l) => /^[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,3}$/.test(l) && !/resume|curriculum|vitae|cv/i.test(l));
   if (nameLine) {
     const parts = nameLine.split(/\s+/);
     p.fullName = nameLine;
@@ -139,7 +141,18 @@ export function parseCv(rawText: string): Record<string, unknown> {
   if (school) p.school = school.replace(/\s*[|·•,]\s*\d{4}.*$/, "").trim();
 
   for (const [re, name] of DEGREES) if (re.test(text)) { p.degree = name; break; }
-  const major = MAJORS.find((m) => low.includes(m.toLowerCase()));
+  // Look for the branch on the degree line first. A whole-text scan matched
+  // "Electronics" inside an employer's name ("MP State Electronics Development
+  // Corporation") on a Mechanical CV, 17 Nov 2026.
+  const degreeLine = lines.find((l) => /\b(b\.?\s?tech|b\.?\s?e\b|bachelor|m\.?\s?tech|master|b\.?sc|m\.?sc)/i.test(l)) ?? "";
+  const SHORT: [RegExp, string][] = [
+    [/\bmechanical\b/i, "Mechanical Engineering"], [/\bcivil\b/i, "Civil Engineering"],
+    [/\belectrical\b/i, "Electrical Engineering"], [/\b(ece|electronics)\b/i, "Electronics and Communication"],
+    [/\b(cse|computer science)\b/i, "Computer Science"], [/\b(it|information technology)\b/i, "Information Technology"],
+  ];
+  const major = MAJORS.find((m) => degreeLine.toLowerCase().includes(m.toLowerCase()))
+    ?? SHORT.find(([re]) => re.test(degreeLine))?.[1]
+    ?? MAJORS.find((m) => low.includes(m.toLowerCase()));
   if (major) p.major = major;
 
   const years = (flat.match(/\b(19|20)\d{2}\b/g) ?? []).map(Number).filter((y) => y >= 2015 && y <= 2035);
@@ -162,7 +175,10 @@ export function parseCv(rawText: string): Record<string, unknown> {
   for (const line of lines.slice(0, 12)) {
     const seg = line.split(/[|·•]/).find((x) => /,\s*(India|USA|United States|UK|Canada|[A-Z]{2})\b/.test(x));
     if (!seg) continue;
-    const m = seg.trim().match(/([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)?),\s*(India|USA|United States|UK|Canada|[A-Z]{2})\b/);
+    // Link labels sit on the same header line ("CodeChef  Bengaluru, India") and
+    // would be read as the first word of the city.
+    const clean = seg.replace(/\b(GitHub|LinkedIn|LeetCode|Codeforces|CodeChef|AtCoder|Portfolio|Email|Mobile|Phone)\b:?/g, " ");
+    const m = clean.trim().match(/([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)?),\s*(India|USA|United States|UK|Canada|[A-Z]{2})\b/);
     if (m) { p.location = m[0]; p.city = m[1]; p.country = m[2]; break; }
   }
 
