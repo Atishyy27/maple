@@ -12,7 +12,8 @@ Works on Greenhouse, Lever, Ashby, Workday, plain careers-page forms, and Google
 
 ```sh
 npm install
-npm run profile -- path/to/cv.pdf     # writes profile.yaml from the CV; fix any TODO in it
+npm run profile -- path/to/cv.pdf     # reads your CV and writes profile.yaml (name, contact, school,
+                                      # degree, branch, skills); fill the TODO lines it leaves
 ```
 
 Edit `answers.yaml` for the usual questions (notice period, why this company, and so on).
@@ -40,10 +41,20 @@ bash scripts/bulk-submit.sh jobs.tsv path/to/cv.pdf
 Results go to `jobs-results.tsv`, one line per job. Only one bulk run can go at a time, and a
 link that was already submitted (listed in `var/submitted.txt`) is never submitted again.
 
-## Make it fill more
+## What happened, and what to fix
 
-Every question it skipped is in `var/unanswered.log`. Add the question and your answer to
-`answers.yaml`; the next run fills it.
+Every job writes one line to `var/runs.jsonl` with the reason it ended: submitted, ready but
+not submitted, required left blank, too few fields filled, no form found, apply by email,
+login needed, posting closed, timeout, crashed.
+
+```sh
+npm run report               # all runs
+npm run report 2026-11-17    # runs since a date
+```
+
+It prints the count per reason, the emails to cold-mail (jobs that say "apply by email"), and the
+questions asked most often that `answers.yaml` cannot answer yet. Add those answers and the next
+run fills them.
 
 ## Logins
 
@@ -53,7 +64,8 @@ to Google, LinkedIn or Workday once in that window and it remembers.
 ## What it cannot do
 
 - Salary or CTC fields: left blank on purpose, you type them.
-- Forms that appear only after clicking "Apply" on a listing page: often fills nothing.
+- It follows an "Apply" link up to two pages deep; a form behind a login or an email link is
+  reported, not filled.
 - Greenhouse's hidden captcha can reject an automated Submit; press it yourself there.
 - Pages that need a login you have not done in Maple's Brave.
 
