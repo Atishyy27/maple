@@ -15,7 +15,8 @@
     "serve": "node -e \"require('child_process').spawn(process.platform==='win32'?'python':'python3',['-m','http.server','3939','--directory','fixtures/mock-ats'],{stdio:'inherit'})\"",
     "demo": "tsx src/cli.ts apply --profile fixtures/demo-profile.yaml --answers fixtures/demo-answers.yaml --jobs fixtures/demo-jobs.txt --headless",
     "test": "tsx test/fuzz-resolve.ts && tsx test/upload-slots.ts && tsx test/gate.ts && tsx test/closed.ts && tsx test/notice-option.ts",
-    "report": "node scripts/report.mjs"
+    "report": "node scripts/report.mjs",
+    "source": "node scripts/source.mjs"
   },
   "dependencies": {
     "playwright": "^1.52.0",
