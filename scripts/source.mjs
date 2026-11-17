@@ -31,9 +31,16 @@ for (const f of ["sources/companies.txt", "var/seed-links.txt"]) {
 }
 
 async function get(url) {
-  const r = await fetch(url, { headers: { "user-agent": "maple-job-source" } });
-  if (!r.ok) throw new Error(`${r.status}`);
-  return r.json();
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const r = await fetch(url, { headers: { "user-agent": "maple-job-source" }, signal: AbortSignal.timeout(30000) });
+      if (!r.ok) throw Object.assign(new Error(`${r.status}`), { http: true });
+      return await r.json();
+    } catch (e) {
+      if (e.http || attempt >= 2) throw e; // retry only network errors
+      await new Promise((res) => setTimeout(res, 2000 * (attempt + 1)));
+    }
+  }
 }
 
 const fresh = (d) => !d || (Date.now() - new Date(d).getTime()) / 86400000 <= MAX_AGE_DAYS;
