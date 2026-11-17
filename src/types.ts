@@ -98,6 +98,9 @@ export type ApplyResult = {
   submitted: boolean;
   confirmationId?: string;
   error?: string;
+  /** why the job ended this way: submitted, required left blank, no form found, apply by email, login needed, posting closed, timeout, crashed */
+  reason?: string;
+  note?: string;
   screenshot?: string;
   durationMs: number;
 };

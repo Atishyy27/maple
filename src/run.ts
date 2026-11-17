@@ -149,7 +149,7 @@ export async function applyToJob(
     if (isClosedPosting(bodyText)) {
       log(adapter.name, "posting is closed -- nothing filled.");
       if (!o.keepOpen) await page.close().catch(() => {});
-      return { url, platform: adapter.name, filled: 0, skipped: 0, submitted: false, error: "posting closed", durationMs: Date.now() - start };
+      return { url, platform: adapter.name, filled: 0, skipped: 0, submitted: false, error: "posting closed", reason: "posting closed", durationMs: Date.now() - start };
     }
 
     if (adapter.requiresAccount) {
@@ -284,11 +284,11 @@ export async function applyToJob(
     // still have an "Apply" or "Submit" button, and pressing it with nothing filled is
     // not an application. Submit only a form that is mostly ours and has no empty
     // required field left.
-    const emptyRequired = o.submit ? await page.evaluate(() =>
+    const emptyRequired = await page.evaluate(() =>
       Array.from(document.querySelectorAll("input,textarea,select") as unknown as ArrayLike<HTMLInputElement>).filter((e) =>
         (e.required || e.getAttribute("aria-required") === "true") && e.offsetParent !== null &&
         e.type !== "hidden" && (e.type === "file" ? !e.files?.length : (e.type === "radio" || e.type === "checkbox") ? false : !e.value)
-      ).length).catch(() => 0) : 0;
+      ).length).catch(() => 0);
     if (o.submit && (filled < 3 || emptyRequired > 0)) {
       log(adapter.name, `not submitted: filled ${filled}, empty required ${emptyRequired}`);
     } else if (o.submit) {
@@ -311,18 +311,35 @@ export async function applyToJob(
       log(adapter.name, "DRY RUN -- form filled, nothing submitted. Review the window.");
     }
 
+    // Why this job ended the way it did, so a bulk run can be read as a list of causes.
+    let reason = submitted ? "submitted" : filled >= 3 && emptyRequired === 0 ? "ready, not submitted" : emptyRequired ? "required left blank" : "too few fields filled";
+    let note = emptyRequired ? `${emptyRequired} required field(s) empty` : "";
+    if (filled === 0) {
+      const hint = await page.evaluate(() => {
+        const a = Array.from(document.querySelectorAll("a") as unknown as ArrayLike<HTMLAnchorElement>);
+        const mail = a.find((e) => /^mailto:/i.test(e.href) && /appl|career|job|hr|hiring/i.test(e.href + e.innerText));
+        const text = document.body?.innerText || "";
+        return {
+          mail: mail ? mail.href.replace(/^mailto:/i, "").split("?")[0] : "",
+          login: /sign in to apply|log ?in to apply|create an account|sign in with/i.test(text),
+        };
+      }).catch(() => ({ mail: "", login: false }));
+      reason = hint.mail ? "apply by email" : hint.login ? "login needed" : "no form found";
+      note = hint.mail || "";
+    }
     const shot = path.resolve(ROOT, `var/screenshots/${adapter.name}-${Date.now()}.png`);
     await page.screenshot({ path: shot, fullPage: true }).catch(() => {});
     appendUnanswered(unanswered);
     if (!o.keepOpen) await page.close();
 
-    return { url, platform: adapter.name, filled, skipped, submitted, confirmationId, screenshot: shot, durationMs: Date.now() - start };
+    return { url, platform: adapter.name, filled, skipped, submitted, confirmationId, reason, note, screenshot: shot, durationMs: Date.now() - start };
   } catch (e: any) {
     const shot = path.resolve(ROOT, `var/screenshots/error-${Date.now()}.png`);
     await page.screenshot({ path: shot, fullPage: true }).catch(() => {});
     appendUnanswered(unanswered);
     if (!o.keepOpen) await page.close().catch(() => {});
-    return { url, platform: adapter.name, filled, skipped, submitted: false, error: e?.message ?? String(e), screenshot: shot, durationMs: Date.now() - start };
+    const msg = e?.message ?? String(e);
+    return { url, platform: adapter.name, filled, skipped, submitted: false, error: msg, reason: /timeout/i.test(msg) ? "timeout" : "crashed", note: msg.split("\n")[0].slice(0, 120), screenshot: shot, durationMs: Date.now() - start };
   }
 }
 

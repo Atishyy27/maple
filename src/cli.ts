@@ -106,7 +106,12 @@ async function main() {
   const results = [];
   for (const url of jobs) {
     console.log(`\n──────── ${url}`);
-    results.push(await applyToJob(url, ctx, { profile, answers }, opts));
+    const r = await applyToJob(url, ctx, { profile, answers }, opts);
+    results.push(r);
+    // One JSON line per job, kept forever: `npm run report` reads it.
+    fs.appendFileSync("var/runs.jsonl", JSON.stringify({ at: new Date().toISOString(), url, platform: r.platform,
+      filled: r.filled, skipped: r.skipped, submitted: r.submitted, reason: r.reason ?? (r.error ? "crashed" : ""),
+      note: r.note ?? r.error ?? "", ms: r.durationMs }) + "\n");
   }
 
   console.log("\n──────── SUMMARY");
