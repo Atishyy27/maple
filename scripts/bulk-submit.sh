@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
 # Fill and submit every job in a TSV (row<TAB>company<TAB>url), one at a time, through the
-# already-running browser on 9222. Writes one result line per job so a crash mid-run loses nothing.
-#   bash scripts/bulk-submit.sh var/bulk-17nov.tsv /path/to/cv.pdf
+# browser already running on port 9222. One result line per job, so a crash loses nothing.
+#   bash scripts/bulk-submit.sh jobs.tsv /path/to/cv.pdf
+#
+# Two guards, both added after 17 Nov 2026, when a stopped run kept going in the background
+# and a second run started beside it: 6 companies got the same application 2-3 times.
+#   1. A lock file: a second copy refuses to start while one is running.
+#   2. var/submitted.txt: every URL that was ever submitted. A URL in it is never tried again.
 IN="$1"; CV="$2"; OUT="${IN%.tsv}-results.tsv"
 cd "$(dirname "$0")/.."
-[ -n "$APPEND" ] || : > "$OUT"
+LOCK=var/bulk.lock; DONE=var/submitted.txt
+touch "$DONE"
+if [ -f "$LOCK" ] && kill -0 "$(cat "$LOCK")" 2>/dev/null; then
+  echo "another bulk run is going (pid $(cat "$LOCK")); stop it first"; exit 1
+fi
+echo $$ > "$LOCK"; trap 'rm -f "$LOCK"' EXIT
 total=$(wc -l < "$IN"); i=0
 while IFS=$'\t' read -r row company url; do
-  i=$((i+1))
-  url="${url%$'\r'}"
+  i=$((i+1)); url="${url%$'\r'}"
+  if grep -qxF "$url" "$DONE"; then echo "[$i/$total] row $row $company :: already submitted, skipped"; continue; fi
   res=$(timeout 150 npx tsx src/cli.ts apply --attach --submit --cv "$CV" --url "$url" 2>&1 | grep -E "│ 0 " | tail -1 | tr -s ' ' | sed 's/│/|/g')
-  conf=$(grep -o "submitted -> .*" <<<"$res" | head -1)
+  grep -q "'yes'" <<<"$res" && echo "$url" >> "$DONE"
   printf '%s\t%s\t%s\t%s\n' "$row" "$company" "$url" "${res:-timeout or crash}" >> "$OUT"
   echo "[$i/$total] row $row $company :: ${res:-timeout or crash}"
 done < "$IN"
