@@ -289,7 +289,13 @@ export async function applyToJob(
         (e.required || e.getAttribute("aria-required") === "true") && e.offsetParent !== null &&
         e.type !== "hidden" && (e.type === "file" ? !e.files?.length : (e.type === "radio" || e.type === "checkbox") ? false : !e.value)
       ).length).catch(() => 0);
-    if (o.submit && (filled < 3 || emptyRequired > 0)) {
+    // A page with a password box is a login or account sign-up, never an application.
+    // Bulk run, 17 Nov 2026: Maple filled YC's sign-up form (name, email) on 4
+    // workatastartup links and pressed "Sign up". Accounts and logins are his to make.
+    const passwordBox = await page.locator('input[type="password"]:visible').count().catch(() => 0);
+    if (o.submit && passwordBox > 0) {
+      log(adapter.name, "not submitted: this page is a login or sign-up form (has a password box)");
+    } else if (o.submit && (filled < 3 || emptyRequired > 0)) {
       log(adapter.name, `not submitted: filled ${filled}, empty required ${emptyRequired}`);
     } else if (o.submit) {
       submitted = await adapter.submit(page);
@@ -312,7 +318,7 @@ export async function applyToJob(
     }
 
     // Why this job ended the way it did, so a bulk run can be read as a list of causes.
-    let reason = submitted ? "submitted" : filled >= 3 && emptyRequired === 0 ? "ready, not submitted" : emptyRequired ? "required left blank" : "too few fields filled";
+    let reason = submitted ? "submitted" : passwordBox > 0 ? "login needed" : filled >= 3 && emptyRequired === 0 ? "ready, not submitted" : emptyRequired ? "required left blank" : "too few fields filled";
     let note = emptyRequired ? `${emptyRequired} required field(s) empty` : "";
     if (filled === 0) {
       const hint = await page.evaluate(() => {
