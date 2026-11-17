@@ -1,4 +1,4 @@
-// Start your installed Chrome (or Edge) with CDP on 9222 for `apply --attach`.
+// Start your installed Brave, Chrome or Edge with CDP on 9222 for `apply --attach`.
 // Playwright's own launcher adds --enable-automation, and Lever's hCaptcha rejects
 // the submit even when a human clicks it. A plain Chrome started by us has no such flag.
 // Chrome only allows remote debugging on a non-default profile, so Maple keeps its own.
@@ -8,6 +8,8 @@ import { resolve } from "node:path";
 
 const candidates = [
   process.env.MAPLE_CHROME,
+  process.env.LOCALAPPDATA && `${process.env.LOCALAPPDATA}/BraveSoftware/Brave-Browser/Application/brave.exe`,
+  "C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe",
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
