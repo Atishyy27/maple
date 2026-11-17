@@ -56,15 +56,20 @@ async function hasVisibleForm(page: Page): Promise<boolean> {
     const loc = frame.locator(
       "input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]), select, textarea"
     );
+    // One visible box is usually a site search or a newsletter field, not the
+    // application. Bulk run, 17 Nov 2026: 207 of 282 careers pages filled 0 because
+    // a lone search box made the page look like it already had its form.
     const c = Math.min(await loc.count().catch(() => 0), 40);
+    let seen = 0;
     for (let i = 0; i < c; i++) {
-      if (await loc.nth(i).isVisible().catch(() => false)) return true;
+      if (await loc.nth(i).isVisible().catch(() => false)) seen++;
+      if (seen >= 3) return true;
     }
   }
   return false;
 }
 
-const REVEAL_RE = /^(apply now|apply for this job|apply online|start application|apply)\b/i;
+const REVEAL_RE = /^(apply now|apply for this (job|position|role|opening)|apply to this (job|role)|apply online|apply here|start (your )?application|i'?m interested|apply)\b/i;
 
 /**
  * Reveal a gated application form.
@@ -95,6 +100,13 @@ async function clickReveal(page: Page, re: RegExp): Promise<boolean> {
       if (!txt || !re.test(txt)) continue;
       if (!(await el.isVisible().catch(() => false))) continue;
       if (await el.isDisabled().catch(() => false)) continue;
+      // A real link is followed in this tab. Clicking it often opens a new tab
+      // (target=_blank) that the run never sees, so the form is filled nowhere.
+      const href = await el.evaluate((e) => (e as HTMLAnchorElement).href || "").catch(() => "");
+      if (href && /^https?:/.test(href) && !/#/.test(href.replace(page.url().split("#")[0] ?? "", ""))) {
+        await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
+        return true;
+      }
       await el.scrollIntoViewIfNeeded().catch(() => {});
       await el.click({ timeout: 3000 }).catch(() => {});
       return true;
@@ -104,9 +116,13 @@ async function clickReveal(page: Page, re: RegExp): Promise<boolean> {
 }
 
 async function revealGatedForm(page: Page): Promise<void> {
-  if (await hasVisibleForm(page)) return;
-  const clicked = await clickReveal(page, REVEAL_RE);
-  if (clicked) await settle(page, 1400);
+  // Up to two hops: a careers listing links to the job page, which has its own Apply.
+  for (let hop = 0; hop < 2; hop++) {
+    if (await hasVisibleForm(page)) return;
+    const clicked = await clickReveal(page, REVEAL_RE);
+    if (!clicked) return;
+    await settle(page, 1400);
+  }
 }
 
 const NEXT_RE = /^(next|continue|save and continue|save & continue|proceed|next step)\b/i;
