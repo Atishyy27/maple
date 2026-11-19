@@ -9,7 +9,7 @@
 //   node scripts/source.mjs            -> var/sourced.tsv (row<TAB>company<TAB>apply link)
 import fs from "node:fs";
 
-const KEEP_TITLE = /\b(intern|internship|new grad|graduate|trainee|fresher|entry level|early career|sde ?i\b|software engineer i\b|associate software|junior)\b/i;
+const KEEP_TITLE = /\b(intern|internship|new grad|graduate|trainee|fresher|entry level|early career|campus|sde[- ]?(1|i)|engineer[- ]?(1|i)|associate (software )?engineer|junior)\b/i;
 const DROP_TITLE = /\b(senior|sr\.?|staff|principal|lead|manager|director|head of|vp)\b/i;
 const ROLE = /\b(engineer|engineering|developer|sde|software|ml|ai|machine learning|data|research|backend|frontend|full ?stack|platform|devops|sre|infra|security|applied)\b/i;
 // "Remote" alone is often US-only (Notion: "New York, remote"), so the place must name India.
