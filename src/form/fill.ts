@@ -56,7 +56,9 @@ async function fillCombobox(scope: Page | Frame, ref: string, want: string, o: F
     await loc.type(want.slice(0, 24));
   });
 
-  const popup = scope.locator('[role="option"], [role="listbox"] li, .select__option, [class*="option" i]');
+  // Visible options only, and never the phone-number country picker (intl-tel-input renders its
+  // ~240 hidden <li role="option" class="iti__country"> on the same page; Agoda, 21 Nov 2026).
+  const popup = scope.locator('[role="option"]:visible, [role="listbox"] li:visible, .select__option:visible, [class*="option" i]:visible').filter({ hasNot: scope.locator(".iti__country") }).and(scope.locator(":not(.iti__country)"));
   try {
     await popup.first().waitFor({ state: "visible", timeout: 4000 });
   } catch {
