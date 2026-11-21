@@ -144,11 +144,12 @@ export function parseCv(rawText: string): Record<string, unknown> {
   // Look for the branch on the degree line first. A whole-text scan matched
   // "Electronics" inside an employer's name ("MP State Electronics Development
   // Corporation") on a Mechanical CV, 17 Nov 2026.
-  const degreeLine = lines.find((l) => /\b(b\.?\s?tech|b\.?\s?e\b|bachelor|m\.?\s?tech|master|b\.?sc|m\.?sc)/i.test(l)) ?? "";
+  // Case-sensitive B.E. (the English word "be" matched before), and a degree word, not prose.
+  const degreeLine = lines.find((l) => /\b(B\.?\s?Tech|B\.E\.?|BE\b|Bachelor|M\.?\s?Tech|Master'?s?\b|B\.?Sc|M\.?Sc)/.test(l) || /\b(b\.?\s?tech|bachelor of|master of)\b/i.test(l)) ?? "";
   const SHORT: [RegExp, string][] = [
     [/\bmechanical\b/i, "Mechanical Engineering"], [/\bcivil\b/i, "Civil Engineering"],
     [/\belectrical\b/i, "Electrical Engineering"], [/\b(ece|electronics)\b/i, "Electronics and Communication"],
-    [/\b(cse|computer science)\b/i, "Computer Science"], [/\b(it|information technology)\b/i, "Information Technology"],
+    [/\b(cse|computer science)\b/i, "Computer Science"], [/\bIT\b|\b[Ii]nformation [Tt]echnology\b/, "Information Technology"],
   ];
   const major = MAJORS.find((m) => degreeLine.toLowerCase().includes(m.toLowerCase()))
     ?? SHORT.find(([re]) => re.test(degreeLine))?.[1]
