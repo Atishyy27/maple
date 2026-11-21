@@ -23,6 +23,13 @@ if (!exe) {
   process.exit(1);
 }
 
+// A running browser holds the login sessions; never start a second one over it.
+try {
+  const v = await (await fetch("http://127.0.0.1:9222/json/version")).json();
+  console.log(`browser already up on 9222: ${v.Browser} (left as is)`);
+  process.exit(0);
+} catch {}
+
 const profile = resolve("var/chrome-profile");
 mkdirSync(profile, { recursive: true });
 const child = spawn(exe, [
