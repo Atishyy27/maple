@@ -22,6 +22,8 @@ async function ok(ats, slug) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const r = await fetch(urls[ats](slug), { headers: { "user-agent": "maple-job-source" }, signal: AbortSignal.timeout(30000) });
+      // 404 = no board under this slug. 429/5xx say nothing about the board: retry.
+      if (r.status === 429 || r.status >= 500) throw new Error(`http ${r.status}`);
       if (!r.ok) return false;
       const j = await r.json();
       return ats === "lever" ? Array.isArray(j) : Array.isArray(j.jobs);
@@ -44,4 +46,4 @@ for (const n of names) {
   process.stdout.write(`${n}: ${hit || "-"}\n`);
 }
 if (found.length) fs.appendFileSync("sources/companies.txt", found.join("\n") + "\n");
-console.log(`\n${found.length} new boards added to sources/companies.txt (of ${names.length} names)`);
+console.log(`\n${found.length} new boards added to sources/companies.txt (of ${names.length} names); ${netErrors} lookups failed on network or rate limit, rerun to retry them`);

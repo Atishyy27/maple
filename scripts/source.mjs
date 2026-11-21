@@ -13,7 +13,7 @@ const KEEP_TITLE = /\b(intern|internship|new grad|graduate|trainee|fresher|entry
 const DROP_TITLE = /\b(senior|sr\.?|staff|principal|lead|manager|director|head of|vp)\b/i;
 const ROLE = /\b(engineer|engineering|developer|sde|software|ml|ai|machine learning|data|research|backend|frontend|full ?stack|platform|devops|sre|infra|security|applied)\b/i;
 // "Remote" alone is often US-only (Notion: "New York, remote"), so the place must name India.
-const KEEP_PLACE = /\b(india|bengaluru|bangalore|hyderabad|pune|mumbai|delhi|gurgaon|gurugram|noida|chennai|indore|apac)\b/i;
+const KEEP_PLACE = /\b(india|bengaluru|bangalore|hyderabad|pune|mumbai|delhi|gurgaon|gurugram|noida|chennai|indore)\b/i;
 const MAX_AGE_DAYS = 45;
 
 const seeds = new Set();
@@ -43,7 +43,8 @@ async function get(url) {
   }
 }
 
-const fresh = (d) => !d || (Date.now() - new Date(d).getTime()) / 86400000 <= MAX_AGE_DAYS;
+// No date means unknown age: keep it out rather than send an application to a stale posting.
+const fresh = (d) => !!d && (Date.now() - new Date(d).getTime()) / 86400000 <= MAX_AGE_DAYS;
 
 async function fetchBoard(ats, slug) {
   if (ats === "greenhouse") {
@@ -71,5 +72,6 @@ for (const s of seeds) {
     }
   } catch (e) { stats.boardsFailed++; if (process.env.DEBUG) console.error(s, e.message); }
 }
+if (!stats.boards) { console.error("every board failed (network?); var/sourced.tsv left unchanged"); process.exit(1); }
 fs.writeFileSync("var/sourced.tsv", out.map((r) => r.join("\t")).join("\n") + (out.length ? "\n" : ""));
 console.log(`${seeds.size} companies | ${stats.boards} boards read, ${stats.boardsFailed} failed | ${stats.postings} postings | ${out.length} kept (intern/new-grad, India or remote, last ${MAX_AGE_DAYS} days) -> var/sourced.tsv`);
