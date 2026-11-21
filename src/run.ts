@@ -335,7 +335,9 @@ export async function applyToJob(
     }
     const shot = path.resolve(ROOT, `var/screenshots/${adapter.name}-${Date.now()}.png`);
     await page.screenshot({ path: shot, fullPage: true }).catch(() => {});
-    appendUnanswered(unanswered);
+    // Skipped "fields" on a page that is not an application (a listing, a login wall) are page
+    // chrome, and they drowned the real questions in `npm run report` (22 Nov 2026).
+    if (filled > 0 && !["no form found", "login needed", "apply by email"].includes(reason)) appendUnanswered(unanswered);
     if (!o.keepOpen) await page.close();
 
     return { url, platform: adapter.name, filled, skipped, submitted, confirmationId, reason, note, screenshot: shot, durationMs: Date.now() - start };

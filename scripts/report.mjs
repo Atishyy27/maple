@@ -21,7 +21,9 @@ const asked = {};
 for (const l of read("var/unanswered.log")) {
   let label = l;
   try { label = JSON.parse(l).label ?? l; } catch {}
-  label = String(label).replace(/\s+/g, " ").trim().slice(0, 90);
+  label = String(label).replace(/[\s​]+/g, " ").trim().slice(0, 90);
+  // Option text and widget chrome ("Yes", "Loading...", "Search for option") are not questions.
+  if (label.length < 15 || /^(loading|search for option|select|attach|upload file)/i.test(label)) continue;
   asked[label] = (asked[label] || 0) + 1;
 }
 const top = Object.entries(asked).sort((a, b) => b[1] - a[1]).slice(0, 15);
