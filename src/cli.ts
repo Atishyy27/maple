@@ -120,7 +120,7 @@ async function main() {
       platform: r.platform,
       filled: r.filled,
       skipped: r.skipped,
-      submitted: r.submitted ? "yes" : "-",
+      submitted: r.submitted ? "yes" : r.reason === "clicked, unconfirmed" ? "clicked" : "-",
       id: r.confirmationId ?? "",
       ms: r.durationMs,
       error: r.error?.slice(0, 40) ?? "",

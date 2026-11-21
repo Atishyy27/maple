@@ -100,13 +100,23 @@ const REVEAL_RE = /^(apply now|apply for this (job|position|role|opening)|apply 
  * misses it. This one scans anchors and onclick elements too.
  */
 async function clickReveal(page: Page, re: RegExp): Promise<boolean> {
-  const SEL = 'a, button, [role="button"], input[type="submit"], input[type="button"], [onclick]';
+  // No input[type=submit]: looking for the way IN to a form must never send one.
+  const SEL = 'a, button, [role="button"], input[type="button"], [onclick]';
   for (const frame of [page.mainFrame(), ...page.frames()]) {
     const loc = frame.locator(SEL);
     for (const i of await matching(loc, re)) {
       const el = loc.nth(i);
       if (!(await el.isVisible().catch(() => false))) continue;
       if (await el.isDisabled().catch(() => false)) continue;
+      // A button that belongs to a form with fields is that form's submit, not a reveal.
+      // Review 22 Nov 2026: a short form read as "no form", then "Apply now" submitted it empty.
+      const isFormSubmit = await el.evaluate((e) => {
+        const f = e.closest("form");
+        if (!f || e.tagName === "A") return false;
+        const t = (e as HTMLButtonElement).type;
+        return t === "submit" && f.querySelectorAll("input:not([type=hidden]),textarea,select").length > 0;
+      }).catch(() => false);
+      if (isFormSubmit) continue;
       // A real link is followed in this tab. Clicking it often opens a new tab
       // (target=_blank) that the run never sees, so the form is filled nowhere.
       const href = await el.evaluate((e) => (e as HTMLAnchorElement).href || "").catch(() => "");
@@ -140,7 +150,8 @@ async function revealGatedForm(page: Page): Promise<void> {
 }
 
 const NEXT_RE = /^(next|continue|save and continue|save & continue|proceed|next step)\b/i;
-const SUBMIT_RE = /^(submit application|submit|send application|send|apply now|apply for this (job|role|position)|apply|finish|complete application)\b/i;
+// Whole-label match only: "Apply with LinkedIn" and "Send OTP" are not submits.
+const SUBMIT_RE = /^(submit application|submit|send application|apply now|apply for this (job|role|position)|apply|finish|complete application)\s*[>→]?$/i;
 const CONFIRM_RE = /(thank you|application (was )?(received|submitted|complete)|we(?:'| ha)ve received|successfully submitted|confirmation)/i;
 
 export const generic: Adapter = {

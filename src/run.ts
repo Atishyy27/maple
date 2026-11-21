@@ -278,29 +278,46 @@ export async function applyToJob(
     }
 
     let submitted = false;
+    let clicked = false;
     let confirmationId: string | undefined;
 
     // Bulk runs, 17 Nov 2026: pages with no real form (a careers listing, a job board)
     // still have an "Apply" or "Submit" button, and pressing it with nothing filled is
     // not an application. Submit only a form that is mostly ours and has no empty
     // required field left.
-    const emptyRequired = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("input,textarea,select") as unknown as ArrayLike<HTMLInputElement>).filter((e) =>
-        (e.required || e.getAttribute("aria-required") === "true") && e.offsetParent !== null &&
-        e.type !== "hidden" && (e.type === "file" ? !e.files?.length : (e.type === "radio" || e.type === "checkbox") ? false : !e.value)
-      ).length).catch(() => 0);
+    // Every frame, not just the main one (an embedded Greenhouse form lives in an iframe).
+    let emptyRequired = 0;
+    for (const sc of scopes(page)) {
+      emptyRequired += await sc.evaluate(() => {
+        const vis = (e: Element) => (e as HTMLElement).offsetParent !== null;
+        const inputs = Array.from(document.querySelectorAll("input,textarea,select") as unknown as ArrayLike<HTMLInputElement>).filter((e) =>
+          (e.required || e.getAttribute("aria-required") === "true") && vis(e) && e.type !== "hidden" &&
+          (e.type === "file" ? !e.files?.length : e.type === "checkbox" ? !e.checked : e.type === "radio" ? false : !e.value)).length;
+        // required radio groups with nothing picked
+        const groups = new Set(Array.from(document.querySelectorAll("input[type=radio][required]") as unknown as ArrayLike<HTMLInputElement>).filter(vis).map((r) => r.name));
+        let radios = 0;
+        groups.forEach((n) => { if (!document.querySelector(`input[type=radio][name="${CSS.escape(n)}"]:checked`)) radios++; });
+        // custom comboboxes marked required on a wrapper, still showing no choice
+        const combos = Array.from(document.querySelectorAll('[aria-required="true"]:not(input):not(textarea):not(select)')).filter((e) =>
+          vis(e) && /(select one|0 items selected|select\.\.\.|^\s*select\s*$)/i.test((e as HTMLElement).innerText || "")).length;
+        return inputs + radios + combos;
+      }).catch(() => 0);
+    }
     // A page with a password box is a login or account sign-up, never an application.
     // Bulk run, 17 Nov 2026: Maple filled YC's sign-up form (name, email) on 4
     // workatastartup links and pressed "Sign up". Accounts and logins are his to make.
-    const passwordBox = await page.locator('input[type="password"]:visible').count().catch(() => 0);
+    let passwordBox = 0;
+    for (const sc of scopes(page)) passwordBox += await sc.locator('input[type="password"]:visible').count().catch(() => 0);
     if (o.submit && passwordBox > 0) {
       log(adapter.name, "not submitted: this page is a login or sign-up form (has a password box)");
     } else if (o.submit && (filled < 3 || emptyRequired > 0)) {
       log(adapter.name, `not submitted: filled ${filled}, empty required ${emptyRequired}`);
     } else if (o.submit) {
-      submitted = await adapter.submit(page);
-      confirmationId = await adapter.confirmation(page);
-      log(adapter.name, submitted ? `submitted -> ${confirmationId ?? "no confirmation text found"}` : "submit button not found");
+      clicked = await adapter.submit(page);
+      confirmationId = clicked ? await adapter.confirmation(page) : undefined;
+      // A click is not an application. Only a confirmation on the page counts as submitted.
+      submitted = clicked && !!confirmationId;
+      log(adapter.name, !clicked ? "submit button not found" : submitted ? `submitted -> ${confirmationId}` : "clicked submit, no confirmation seen");
     } else {
       // un-clip: force overflow visible / drop max-heights so a short viewport
       // or a fixed-height container cannot clip the captcha + submit off-screen.
@@ -318,16 +335,16 @@ export async function applyToJob(
     }
 
     // Why this job ended the way it did, so a bulk run can be read as a list of causes.
-    let reason = submitted ? "submitted" : passwordBox > 0 ? "login needed" : filled >= 3 && emptyRequired === 0 ? "ready, not submitted" : emptyRequired ? "required left blank" : "too few fields filled";
+    let reason = submitted ? "submitted" : clicked ? "clicked, unconfirmed" : passwordBox > 0 ? "login needed" : filled >= 3 && emptyRequired === 0 ? "ready, not submitted" : emptyRequired ? "required left blank" : "too few fields filled";
     let note = emptyRequired ? `${emptyRequired} required field(s) empty` : "";
     if (filled === 0) {
       const hint = await page.evaluate(() => {
         const a = Array.from(document.querySelectorAll("a") as unknown as ArrayLike<HTMLAnchorElement>);
-        const mail = a.find((e) => /^mailto:/i.test(e.href) && /appl|career|job|hr|hiring/i.test(e.href + e.innerText));
+        const mail = a.find((e) => /^mailto:/i.test(e.href) && /\b(hr|careers?|jobs|hiring|recruit\w*|talent)@/i.test(e.href));
         const text = document.body?.innerText || "";
         return {
           mail: mail ? mail.href.replace(/^mailto:/i, "").split("?")[0] : "",
-          login: /sign in to apply|log ?in to apply|create an account|sign in with/i.test(text),
+          login: /sign in to apply|log ?in to apply|create an account to apply/i.test((document.querySelector("main") as HTMLElement | null)?.innerText || text),
         };
       }).catch(() => ({ mail: "", login: false }));
       reason = hint.mail ? "apply by email" : hint.login ? "login needed" : "no form found";
