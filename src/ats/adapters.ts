@@ -293,6 +293,10 @@ export const workday: Adapter = {
     await generic.prepare(page);
     await clickByText(page, /^(apply|apply manually|autofill with resume)$/i, 2000).catch(() => {});
     await settle(page);
+    // The page shell carries data-automation-id long before the form exists. Zebra, 21 Nov
+    // 2026: 0 inputs at 5 s, 16 at 10 s, so reading early filled nothing. Wait for a real box.
+    await page.waitForSelector('[data-automation-id="formField-legalNameSection_firstName"] input, input[id$="--firstName"], form input:not([type="hidden"])', { state: "visible", timeout: 25000 }).catch(() => {});
+    await settle(page, 800);
   },
 
   async next(page) {
