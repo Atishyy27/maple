@@ -14,13 +14,17 @@ touch "$DONE"
 if [ -f "$LOCK" ] && kill -0 "$(cat "$LOCK")" 2>/dev/null; then
   echo "another bulk run is going (pid $(cat "$LOCK")); stop it first"; exit 1
 fi
-echo $$ > "$LOCK"; trap 'rm -f "$LOCK"' EXIT
+echo $$ > "$LOCK"; trap 'rm -f "$LOCK" "$SEEN"' EXIT
+# Everything already applied to: this file plus the ledger, with links normalised (query string,
+# trailing slash and /apply suffixes stripped), so a re-linked posting still counts as seen.
+SEEN=$(mktemp); node scripts/seen-urls.mjs list > "$SEEN"
 total=$(wc -l < "$IN"); i=0
 while IFS=$'\t' read -r row company url; do
   i=$((i+1)); url="${url%$'\r'}"
-  if grep -qxF "$url" "$DONE"; then echo "[$i/$total] row $row $company :: already submitted, skipped"; continue; fi
+  key=$(node scripts/seen-urls.mjs norm "$url")
+  if grep -qxF "$key" "$SEEN"; then echo "[$i/$total] row $row $company :: already submitted, skipped"; continue; fi
   res=$(timeout 150 npx tsx src/cli.ts apply --attach --submit --cv "$CV" --url "$url" 2>&1 | grep -E "│ 0 " | tail -1 | tr -s ' ' | sed 's/│/|/g')
-  grep -q "'yes'" <<<"$res" && echo "$url" >> "$DONE"
+  grep -q "'yes'" <<<"$res" && { echo "$url" >> "$DONE"; echo "$key" >> "$SEEN"; }
   printf '%s\t%s\t%s\t%s\n' "$row" "$company" "$url" "${res:-timeout or crash}" >> "$OUT"
   echo "[$i/$total] row $row $company :: ${res:-timeout or crash}"
 done < "$IN"
